@@ -32,6 +32,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game State")
 	void LoseLife();
 
+	// Game Over
+	UFUNCTION(BlueprintCallable, Category = "Game State")
+	void TriggerGameOver();
+
 	// Wave
 	UFUNCTION(BlueprintPure, Category = "Game State")
 	int32 GetWaveNumber() const { return WaveNumber; }

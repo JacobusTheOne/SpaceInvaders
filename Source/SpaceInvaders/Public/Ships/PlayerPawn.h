@@ -11,6 +11,7 @@ class UInputAction;
 class UStaticMeshComponent;
 class UBoxComponent;
 class UShootingComponent;
+class AProjectile;
 
 UCLASS()
 class SPACEINVADERS_API APlayerPawn : public APawn
@@ -47,6 +48,23 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     UInputAction* FireAction;
+
+    // Shooting
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Shooting", meta = (ClampMin = "0.1"))
+    float FireRate = 2.f;
+
+    // Projectile overrides — 0 means use the projectile class default
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Projectile", meta = (ClampMin = "0.0"))
+    float ProjectileInitialSpeed = 0.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Projectile", meta = (ClampMin = "0.0"))
+    float ProjectileMaxSpeed = 0.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Projectile", meta = (ClampMin = "0.0"))
+    float ProjectileLifeSpan = 0.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Projectile", meta = (ClampMin = "0.0"))
+    float ProjectileDamage = 0.f;
 
     // Movement
     UPROPERTY(EditDefaultsOnly, Category = "Movement")

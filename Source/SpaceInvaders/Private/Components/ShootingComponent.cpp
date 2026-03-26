@@ -31,17 +31,20 @@ void UShootingComponent::TryFire()
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	const FVector SpawnLocation = GetComponentLocation();
-	const FRotator SpawnRotation = FRotator::ZeroRotator;
-
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = Owner;
 	SpawnParams.Instigator = Owner->GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	World->SpawnActor<AProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
+	World->SpawnActor<AProjectile>(ProjectileClass, GetComponentLocation(), FireDirection.Rotation(), SpawnParams);
 
+	StartCooldown();
+}
+
+void UShootingComponent::StartCooldown()
+{
 	bCanFire = false;
-	World->GetTimerManager().SetTimer(FireCooldownTimer, this, &UShootingComponent::ResetFireCooldown, 1.f / FireRate, false);
+	GetWorld()->GetTimerManager().SetTimer(FireCooldownTimer, this, &UShootingComponent::ResetFireCooldown, 1.f / FireRate, false);
 }
 
 void UShootingComponent::ResetFireCooldown()

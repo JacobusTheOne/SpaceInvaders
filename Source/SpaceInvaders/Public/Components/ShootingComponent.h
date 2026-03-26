@@ -16,6 +16,18 @@ public:
 
     void TryFire();
 
+    TSubclassOf<AProjectile> GetProjectileClass() const { return ProjectileClass; }
+    bool CanFire() const { return bCanFire; }
+    void StartCooldown();
+
+    // Direction projectiles travel (world space, normalised)
+    UPROPERTY(EditDefaultsOnly, Category = "Shooting")
+    FVector FireDirection = FVector::ForwardVector;
+
+    // Rounds per second
+    UPROPERTY(EditDefaultsOnly, Category = "Shooting")
+    float FireRate = 2.f;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -23,10 +35,6 @@ private:
     // The projectile class to spawn
     UPROPERTY(EditDefaultsOnly, Category = "Shooting")
     TSubclassOf<AProjectile> ProjectileClass;
-
-    // Rounds per second
-    UPROPERTY(EditDefaultsOnly, Category = "Shooting")
-    float FireRate = 2.f;
 
     bool bCanFire = true;
     FTimerHandle FireCooldownTimer;

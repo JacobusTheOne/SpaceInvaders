@@ -6,6 +6,10 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "GameState/SpaceInvaderGameState.h"
+#include "Components/ShootingComponent.h"
+#include "Components/Projectile.h"
+#include "Kismet/GameplayStatics.h"
+#include "Formation/EnemyFormation.h"
 
 // Sets default values
 AEnemyBase::AEnemyBase()
@@ -26,13 +30,61 @@ AEnemyBase::AEnemyBase()
 	CollisionComponent->SetGenerateOverlapEvents(true);
 	CollisionComponent->SetupAttachment(RootComponent);
 
+	ShootingComponent = CreateDefaultSubobject<UShootingComponent>(TEXT("ShootingComponent"));
+	ShootingComponent->SetupAttachment(RootComponent);
+	ShootingComponent->FireDirection = FVector(-1.f, 0.f, 0.f); // fire toward player (-X)
 }
 
 // Called when the game starts or when spawned
 void AEnemyBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	ScheduleNextShot();
+}
+
+void AEnemyBase::InitFormationData(AEnemyFormation* InFormation, int32 InColumnIndex)
+{
+	Formation    = InFormation;
+	ColumnIndex  = InColumnIndex;
+}
+
+void AEnemyBase::ScheduleNextShot()
+{
+	const float Delay = FMath::RandRange(MinFireInterval, MaxFireInterval);
+	GetWorldTimerManager().SetTimer(FireIntervalTimer, this, &AEnemyBase::FireAndReschedule, Delay, false);
+}
+
+void AEnemyBase::FireAndReschedule()
+{
+	// Only fire if this enemy is the bottommost alive in its column
+	if (Formation.IsValid() && Formation->GetBottommostInColumn(ColumnIndex) != this)
+	{
+		ScheduleNextShot();
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	TSubclassOf<AProjectile> ProjClass = ShootingComponent->GetProjectileClass();
+
+	if (World && ProjClass)
+	{
+		const FTransform SpawnTransform(ShootingComponent->FireDirection.Rotation(),
+		                                ShootingComponent->GetComponentLocation());
+
+		AProjectile* Proj = World->SpawnActorDeferred<AProjectile>(ProjClass, SpawnTransform, this, GetInstigator());
+		if (Proj)
+		{
+			if (ProjectileInitialSpeed > 0.f) Proj->SetInitialSpeed(ProjectileInitialSpeed);
+			if (ProjectileMaxSpeed     > 0.f) Proj->SetMaxSpeed(ProjectileMaxSpeed);
+			if (ProjectileLifeSpan     > 0.f) Proj->SetLifeSpanDuration(ProjectileLifeSpan);
+			if (ProjectileDamage       > 0.f) Proj->SetDamage(ProjectileDamage);
+			Proj->Tags.Add(FName("EnemyProjectile"));
+			UGameplayStatics::FinishSpawningActor(Proj, SpawnTransform);
+		}
+	}
+
+	ScheduleNextShot();
 }
 
 // Called every frame
@@ -45,6 +97,8 @@ void AEnemyBase::Tick(float DeltaTime)
 float AEnemyBase::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent,
 	AController* EventInstigator, AActor* DamageCauser)
 {
+	if (DamageCauser && DamageCauser->ActorHasTag(FName("EnemyProjectile"))) return 0.f;
+
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	Health -= FMath::FloorToInt(ActualDamage);

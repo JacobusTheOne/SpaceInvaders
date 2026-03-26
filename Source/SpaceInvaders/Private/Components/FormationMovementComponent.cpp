@@ -79,6 +79,24 @@ void UFormationMovementComponent::DropAndReverse()
 			Enemy->SetActorLocation(Enemy->GetActorLocation() + DropDelta);
 		}
 	}
+
+	CheckPlayerThreshold();
+}
+
+void UFormationMovementComponent::CheckPlayerThreshold()
+{
+	if (bGameOverTriggered || !Formation) return;
+
+	for (AEnemyBase* Enemy : Formation->GetGrid())
+	{
+		if (IsValid(Enemy) && Enemy->GetActorLocation().X <= PlayerXThreshold)
+		{
+			bGameOverTriggered = true;
+			PrimaryComponentTick.bCanEverTick = false;
+			Formation->NotifyGameOver();
+			return;
+		}
+	}
 }
 
 AEnemyBase* UFormationMovementComponent::RightmostAlive() const

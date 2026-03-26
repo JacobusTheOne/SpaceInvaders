@@ -8,6 +8,7 @@
 
 class UTextBlock;
 class ASpaceInvaderGameState;
+class AWaveManager;
 
 UCLASS()
 class SPACEINVADERS_API USpaceInvadersHUDWidget : public UUserWidget
@@ -21,6 +22,9 @@ protected:
 private:
 	void UpdateDisplay();
 
+	UFUNCTION()
+	void OnWaveStarted(int32 WaveNumber);
+
 	// Names must match exactly the widget names in your WBP Blueprint
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* ScoreText;
@@ -33,4 +37,7 @@ private:
 
 	UPROPERTY()
 	ASpaceInvaderGameState* GameState = nullptr;
+
+	UPROPERTY()
+	AWaveManager* WaveManager = nullptr;
 };

@@ -4,10 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Managers/WaveManager.h"
 #include "EnemyFormation.generated.h"
 
 class AEnemyBase;
 class UFormationMovementComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFormationClearedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameOverSignature);
 
 UCLASS()
 class SPACEINVADERS_API AEnemyFormation : public AActor
@@ -18,6 +22,26 @@ public:
 	AEnemyFormation();
 
 	const TArray<AEnemyBase*>& GetGrid() const { return Grid; }
+
+	// Applied before BeginPlay via deferred spawn — sets grid dimensions, enemy class, and movement
+	void Configure(const FWaveConfig& Config);
+
+	// Returns the alive enemy in Col with the lowest row index (closest to the player)
+	AEnemyBase* GetBottommostInColumn(int32 Col) const;
+
+	// Broadcast when every enemy in the formation has been destroyed
+	UPROPERTY(BlueprintAssignable, Category = "Formation")
+	FOnFormationClearedSignature OnFormationCleared;
+
+	// Broadcast when an enemy crosses the GameOver X threshold
+	UPROPERTY(BlueprintAssignable, Category = "Formation")
+	FOnGameOverSignature OnGameOver;
+
+	// Called by FormationMovementComponent when the threshold is crossed
+	void NotifyGameOver();
+
+	// Sets the X threshold on the movement component (called by WaveManager after spawn)
+	void SetGameOverThreshold(float Threshold);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Formation")
 	void OnAllEnemiesDestroyed();
@@ -58,9 +82,16 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Formation")
 	float StartingY = -560.688549f;
 
+	UPROPERTY(EditAnywhere, Category = "Formation")
+	float StartingZ = 108.f;
+
 	// Enemy class to spawn — set this to your Blueprint subclass
 	UPROPERTY(EditAnywhere, Category = "Formation")
 	TSubclassOf<AEnemyBase> EnemyClass;
+
+	// Set via Configure — applied to each enemy on spawn
+	float SpawnShootIntervalMin = 1.f;
+	float SpawnShootIntervalMax = 4.f;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UFormationMovementComponent* MovementComponent;

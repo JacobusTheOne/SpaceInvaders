@@ -19,8 +19,6 @@ AProjectile::AProjectile()
     MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-    ProjectileMovement->InitialSpeed = InitialSpeed;
-    ProjectileMovement->MaxSpeed = MaxSpeed;
     ProjectileMovement->bRotationFollowsVelocity = false;
     ProjectileMovement->bShouldBounce = false;
     ProjectileMovement->ProjectileGravityScale = 0.f;
@@ -30,14 +28,18 @@ void AProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
+    // Apply speed here so Blueprint CDO overrides (EditDefaultsOnly) are respected
+    ProjectileMovement->InitialSpeed = InitialSpeed;
+    ProjectileMovement->MaxSpeed     = MaxSpeed;
+
     // Auto destroy after LifeSpan seconds if it hits nothing
     SetLifeSpan(LifeSpan);
 
     // Bind hit event
     CollisionComponent->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
 
-    // Fire straight up along Z axis
-    ProjectileMovement->Velocity = FVector(InitialSpeed, 0.f, 0.f);
+    // Fire along the actor's forward vector so spawn rotation controls direction
+    ProjectileMovement->Velocity = GetActorForwardVector() * InitialSpeed;
 }
 
 void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,

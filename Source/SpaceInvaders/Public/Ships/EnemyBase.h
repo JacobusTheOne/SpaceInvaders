@@ -8,6 +8,9 @@
 
 class UBoxComponent;
 class USceneComponent;
+class UShootingComponent;
+class AProjectile;
+class AEnemyFormation;
 
 UCLASS()
 class SPACEINVADERS_API AEnemyBase : public APawn
@@ -21,6 +24,29 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	// Random fire interval range (seconds)
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Shooting")
+	float MinFireInterval = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Shooting")
+	float MaxFireInterval = 4.f;
+
+	// Projectile overrides — 0 means use the projectile class default
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Projectile", meta = (ClampMin = "0.0"))
+	float ProjectileInitialSpeed = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Projectile", meta = (ClampMin = "0.0"))
+	float ProjectileMaxSpeed = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Projectile", meta = (ClampMin = "0.0"))
+	float ProjectileLifeSpan = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Projectile", meta = (ClampMin = "0.0"))
+	float ProjectileDamage = 0.f;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UShootingComponent* ShootingComponent;
 
 public:
 	// Called every frame
@@ -48,7 +74,19 @@ protected:
 	int32 Health;
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy")
 	int32 ScoreValue;
+public:
+	void InitFormationData(AEnemyFormation* InFormation, int32 InColumnIndex);
+	void SetFireInterval(float Min, float Max) { MinFireInterval = Min; MaxFireInterval = Max; }
+
 private:
+	TWeakObjectPtr<AEnemyFormation> Formation;
+	int32 ColumnIndex = INDEX_NONE;
+
+	FTimerHandle FireIntervalTimer;
+
+	void FireAndReschedule();
+	void ScheduleNextShot();
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	USceneComponent* SceneRoot;
 

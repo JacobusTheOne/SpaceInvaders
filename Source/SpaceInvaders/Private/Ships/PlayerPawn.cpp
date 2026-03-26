@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/ShootingComponent.h"
+#include "Components/Projectile.h"
 #include "Ships/EnemyBase.h"
 #include "GameState/SpaceInvaderGameState.h"
 #include "GameModes/SpaceInvaderGameModeBase.h"
@@ -34,6 +35,8 @@ void APlayerPawn::BeginPlay()
     Super::BeginPlay();
 
     CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APlayerPawn::OnCollisionOverlap);
+
+    ShootingComponent->FireRate = FireRate;
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
@@ -84,10 +87,26 @@ void APlayerPawn::OnMoveStop()
 
 void APlayerPawn::OnFire()
 {
-    if (ShootingComponent)
+    if (!ShootingComponent || !ShootingComponent->CanFire()) return;
+
+    TSubclassOf<AProjectile> ProjClass = ShootingComponent->GetProjectileClass();
+    if (!ProjClass) return;
+
+    const FTransform SpawnTransform(ShootingComponent->FireDirection.Rotation(),
+                                    ShootingComponent->GetComponentLocation());
+
+    AProjectile* Proj = GetWorld()->SpawnActorDeferred<AProjectile>(ProjClass, SpawnTransform, this, GetInstigator());
+    if (Proj)
     {
-        ShootingComponent->TryFire();
+        if (ProjectileInitialSpeed > 0.f) Proj->SetInitialSpeed(ProjectileInitialSpeed);
+        if (ProjectileMaxSpeed     > 0.f) Proj->SetMaxSpeed(ProjectileMaxSpeed);
+        if (ProjectileLifeSpan     > 0.f) Proj->SetLifeSpanDuration(ProjectileLifeSpan);
+        if (ProjectileDamage       > 0.f) Proj->SetDamage(ProjectileDamage);
+        Proj->Tags.Add(FName("PlayerProjectile"));
+        UGameplayStatics::FinishSpawningActor(Proj, SpawnTransform);
     }
+
+    ShootingComponent->StartCooldown();
 }
 
 void APlayerPawn::OnFireStop()

@@ -1,6 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameState/SpaceInvaderGameState.h"
+#include "Kismet/GameplayStatics.h"
+
+void ASpaceInvaderGameState::TriggerGameOver()
+{
+	UE_LOG(LogTemp, Log, TEXT("GameState: GameOver triggered — reloading level"));
+	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetMapName()));
+}
 
 void ASpaceInvaderGameState::AddScore(int32 Amount)
 {

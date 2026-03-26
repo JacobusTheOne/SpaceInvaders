@@ -4,6 +4,25 @@
 #include "Ships/EnemyBase.h"
 #include "Components/FormationMovementComponent.h"
 
+void AEnemyFormation::Configure(const FWaveConfig& Config)
+{
+	EnemyClass        = Config.EnemyClass;
+	Rows              = Config.EnemyRows;
+	Columns           = Config.EnemyCols;
+	HorizontalSpacing = Config.HorizontalSpacing;
+	VerticalSpacing   = Config.VerticalSpacing;
+	StartingX         = Config.StartingX;
+	StartingY         = Config.StartingY;
+	StartingZ         = Config.StartingZ;
+
+	MovementComponent->MoveStep       = Config.MoveStep * Config.SpeedMultiplier;
+	MovementComponent->StepInterval   = Config.StepInterval;
+	MovementComponent->DropAmount     = Config.DropAmount * Config.DescentMultiplier;
+
+	SpawnShootIntervalMin = Config.ShootIntervalMin;
+	SpawnShootIntervalMax = Config.ShootIntervalMax;
+}
+
 AEnemyFormation::AEnemyFormation()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -17,6 +36,16 @@ void AEnemyFormation::BeginPlay()
 	SpawnGrid();
 }
 
+void AEnemyFormation::NotifyGameOver()
+{
+	OnGameOver.Broadcast();
+}
+
+void AEnemyFormation::SetGameOverThreshold(float Threshold)
+{
+	MovementComponent->PlayerXThreshold = Threshold;
+}
+
 void AEnemyFormation::OnEnemyDestroyed(AActor* DestroyedActor)
 {
 	const int32 Index = Grid.IndexOfByKey(Cast<AEnemyBase>(DestroyedActor));
@@ -28,8 +57,22 @@ void AEnemyFormation::OnEnemyDestroyed(AActor* DestroyedActor)
 	if (AllDead())
 	{
 		UE_LOG(LogTemp, Log, TEXT("EnemyFormation: all enemies destroyed"));
+		OnFormationCleared.Broadcast();
 		OnAllEnemiesDestroyed();
 	}
+}
+
+AEnemyBase* AEnemyFormation::GetBottommostInColumn(int32 Col) const
+{
+	for (int32 Row = 0; Row < Rows; ++Row)
+	{
+		AEnemyBase* Enemy = Grid[Row * Columns + Col];
+		if (IsValid(Enemy))
+		{
+			return Enemy;
+		}
+	}
+	return nullptr;
 }
 
 bool AEnemyFormation::AllDead() const
@@ -66,7 +109,7 @@ void AEnemyFormation::SpawnGrid()
 			FVector SpawnLocation = Origin + FVector(
 				Row * VerticalSpacing,    // X: rows step forward
 				Col * HorizontalSpacing,  // Y: columns step right
-				108.f
+				StartingZ
 			);
 
 			FActorSpawnParameters Params;
@@ -78,6 +121,8 @@ void AEnemyFormation::SpawnGrid()
 			if (Enemy)
 			{
 				Enemy->OnDestroyed.AddDynamic(this, &AEnemyFormation::OnEnemyDestroyed);
+				Enemy->InitFormationData(this, Col);
+				Enemy->SetFireInterval(SpawnShootIntervalMin, SpawnShootIntervalMax);
 			}
 
 			Grid.Add(Enemy);
