@@ -11,7 +11,6 @@ AProjectile::AProjectile()
     // Collision is the root � sphere keeps it simple for now
     CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComponent"));
     CollisionComponent->SetSphereRadius(10.f);
-    CollisionComponent->SetCollisionProfileName(TEXT("Projectile"));
     RootComponent = CollisionComponent;
 
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
@@ -28,18 +27,16 @@ void AProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Apply speed here so Blueprint CDO overrides (EditDefaultsOnly) are respected
-    ProjectileMovement->InitialSpeed = InitialSpeed;
-    ProjectileMovement->MaxSpeed     = MaxSpeed;
-
-    // Auto destroy after LifeSpan seconds if it hits nothing
-    SetLifeSpan(LifeSpan);
-
-    // Bind hit event
+    CollisionComponent->SetCollisionProfileName(CollisionProfileName);
     CollisionComponent->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
 
-    // Fire along the actor's forward vector so spawn rotation controls direction
-    ProjectileMovement->Velocity = GetActorForwardVector() * InitialSpeed;
+    // Pooled instances stay hidden and inert — Activate() configures them at use-time
+    if (bIsPooled) return;
+
+    ProjectileMovement->InitialSpeed = InitialSpeed;
+    ProjectileMovement->MaxSpeed     = MaxSpeed;
+    ProjectileMovement->Velocity     = GetActorForwardVector() * InitialSpeed;
+    SetLifeSpan(LifeSpan);
 }
 
 void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
@@ -48,7 +45,6 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 {
     if (!OtherActor || OtherActor == GetOwner()) return;
 
-    // Apply damage to whatever was hit
     UGameplayStatics::ApplyDamage(
         OtherActor,
         Damage,
@@ -57,5 +53,36 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
         UDamageType::StaticClass()
     );
 
-    Destroy();
+    if (bIsPooled) ReturnToPool();
+    else           Destroy();
+}
+
+void AProjectile::Activate(const FTransform& SpawnTransform, const FVector& FireDirection)
+{
+    SetActorTransform(SpawnTransform);
+    SetActorHiddenInGame(false);
+    CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    ProjectileMovement->SetComponentTickEnabled(true);
+    ProjectileMovement->MaxSpeed = MaxSpeed;
+    ProjectileMovement->Velocity = FireDirection.GetSafeNormal() * InitialSpeed;
+
+    GetWorldTimerManager().SetTimer(
+        PoolLifeSpanTimer, this, &AProjectile::ReturnToPool, LifeSpan, false);
+}
+
+void AProjectile::OverrideSpeed(float NewSpeed)
+{
+    InitialSpeed = NewSpeed;
+    MaxSpeed     = NewSpeed;
+    ProjectileMovement->MaxSpeed = NewSpeed;
+    ProjectileMovement->Velocity = ProjectileMovement->Velocity.GetSafeNormal() * NewSpeed;
+}
+
+void AProjectile::ReturnToPool()
+{
+    GetWorldTimerManager().ClearTimer(PoolLifeSpanTimer);
+    ProjectileMovement->StopMovementImmediately();
+    ProjectileMovement->SetComponentTickEnabled(false);
+    CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    SetActorHiddenInGame(true);
 }

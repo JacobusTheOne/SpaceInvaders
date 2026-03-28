@@ -48,8 +48,8 @@ void AShieldTile::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 {
 	if (AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor))
 	{
-		Enemy->Destroy();
-		UGameplayStatics::ApplyDamage(this, 1.f, nullptr, Enemy, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(Enemy, 2.f, nullptr, this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(this,  2.f, nullptr, Enemy, UDamageType::StaticClass());
 	}
 }
 

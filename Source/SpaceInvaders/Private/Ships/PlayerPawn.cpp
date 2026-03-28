@@ -118,9 +118,12 @@ void APlayerPawn::OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, A
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (Cast<AEnemyBase>(OtherActor))
+    if (AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor))
     {
-        OtherActor->Destroy();
+        if (Enemy->ShouldDieOnPlayerContact())
+        {
+            Enemy->Destroy();
+        }
         TakeDamage(1.f, FDamageEvent(), nullptr, OtherActor);
     }
 }

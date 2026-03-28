@@ -42,17 +42,30 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Projectile")
     void SetDamage(float NewDamage) { Damage = NewDamage; }
 
+    // Sets InitialSpeed/MaxSpeed and immediately updates the movement velocity.
+    // Call after Activate() to override the pool default for a single shot.
+    UFUNCTION(BlueprintCallable, Category = "Projectile")
+    void OverrideSpeed(float NewSpeed);
+
+    // Pool support — called by AWaveManager
+    void Activate(const FTransform& SpawnTransform, const FVector& FireDirection);
+    void ReturnToPool();
+
+    // Set to true on pool-owned instances before FinishSpawningActor
+    UPROPERTY(BlueprintReadWrite, Category = "Projectile")
+    bool bIsPooled = false;
+
 protected:
     virtual void BeginPlay() override;
 
 private:
-    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAcces = "true"))
     USphereComponent* CollisionComponent;
 
-    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAcces = "true"))
     UStaticMeshComponent* MeshComponent;
 
-    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAcces = "true"))
     UProjectileMovementComponent* ProjectileMovement;
 
     UFUNCTION()
@@ -60,18 +73,22 @@ private:
         UPrimitiveComponent* OtherComp, FVector NormalImpulse,
         const FHitResult& Hit);
 
-    UPROPERTY(EditDefaultsOnly, Category = "Projectile")
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile", meta = (AllowPrivateAcces = "true"))
     float InitialSpeed = 1200.f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Projectile")
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile", meta = (AllowPrivateAcces = "true"))
     float MaxSpeed = 1200.f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Projectile")
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile", meta = (AllowPrivateAcces = "true"))
     float LifeSpan = 3.f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Projectile")
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile", meta = (AllowPrivateAcces = "true"))
     float Damage = 1.0f;
 
+    // Collision profile applied to the sphere at BeginPlay.
+    // Set "ProjectilePlayer" on BP_Projectile_Player and "ProjectileEnemy" on BP_Projectile_Enemy.
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile", meta = (AllowPrivateAcces = "true"))
+    FName CollisionProfileName = FName("Projectile");
 
-
+    FTimerHandle PoolLifeSpanTimer;
 };

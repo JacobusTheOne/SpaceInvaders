@@ -23,7 +23,7 @@ public:
 
 	const TArray<AEnemyBase*>& GetGrid() const { return Grid; }
 
-	// Applied before BeginPlay via deferred spawn — sets grid dimensions, enemy class, and movement
+	// Applied before BeginPlay via deferred spawn — sets grid dimensions, per-row enemy classes, and movement
 	void Configure(const FWaveConfig& Config);
 
 	// Returns the alive enemy in Col with the lowest row index (closest to the player)
@@ -63,31 +63,34 @@ private:
 	TArray<AEnemyBase*> Grid;
 
 	// Grid dimensions
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	int32 Rows = 5;
 
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	int32 Columns = 11;
-
+	 
 	// World-space spacing between enemies
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	float HorizontalSpacing = 120.f;
 
-	UPROPERTY(EditAnywhere, Category = "Formation")
-	float VerticalSpacing = 100.f;
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
+	float VerticalSpacing = 120.f;
 
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	float StartingX = 254.688549f;
 
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	float StartingY = -560.688549f;
 
-	UPROPERTY(EditAnywhere, Category = "Formation")
+	UPROPERTY(EditAnywhere, Category = "Formation", meta = (AllowPrivateAccess = "true"))
 	float StartingZ = 108.f;
 
-	// Enemy class to spawn — set this to your Blueprint subclass
-	UPROPERTY(EditAnywhere, Category = "Formation")
-	TSubclassOf<AEnemyBase> EnemyClass;
+	// One class per row — filled by WaveManager::BuildWaveConfig via Configure().
+	// Row 0 = back of formation (furthest from player), Row (Rows-1) = front.
+	TArray<TSubclassOf<AEnemyBase>> RowClasses;
+
+	// HP override per row (0 = use the Blueprint class default)
+	TArray<int32> RowHealthOverrides;
 
 	// Set via Configure — applied to each enemy on spawn
 	float SpawnShootIntervalMin = 1.f;

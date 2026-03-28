@@ -6,6 +6,12 @@ void ASpaceInvaderGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameOnly());
+	}
+
 	if (HUDWidget)
 	{
 		HUDWidget->AddToViewport();

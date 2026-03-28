@@ -20,10 +20,34 @@ AEnemyBase::AEnemyBase()
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	RootComponent = SceneRoot;
 
-	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
-	MeshComponent->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
-	MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	MeshComponent->SetupAttachment(RootComponent);
+	MeshHull = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshHull"));
+	MeshHull->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+	MeshHull->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshHull->SetupAttachment(RootComponent);
+
+	MeshCockpit = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshCockpit"));
+	MeshCockpit->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshCockpit->SetupAttachment(MeshHull);
+
+	MeshLeftWing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshLeftWing"));
+	MeshLeftWing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshLeftWing->SetupAttachment(MeshHull);
+
+	MeshRightWing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshRightWing"));
+	MeshRightWing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshRightWing->SetupAttachment(MeshHull);
+
+	MeshLeftGun = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshLeftGun"));
+	MeshLeftGun->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshLeftGun->SetupAttachment(MeshHull);
+
+	MeshRightGun = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshRightGun"));
+	MeshRightGun->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshRightGun->SetupAttachment(MeshHull);
+
+	MeshEngine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshEngine"));
+	MeshEngine->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MeshEngine->SetupAttachment(MeshHull);
 
 	CollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionComponent"));
 	CollisionComponent->SetCollisionProfileName(TEXT("Enemy"));

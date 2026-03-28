@@ -55,6 +55,9 @@ public:
 	virtual float TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent,
 		AController* EventInstigator, AActor* DamageCauser) override;
 
+	// Returns false for enemies (e.g. the boss) that should survive player contact
+	virtual bool ShouldDieOnPlayerContact() const { return true; }
+
 	// Getters
 	UFUNCTION(BlueprintPure, Category = "Enemy")
 	int32 GetHealth() const { return Health; }
@@ -93,8 +96,29 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UBoxComponent* CollisionComponent;
 
+protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
-	UStaticMeshComponent* MeshComponent;
+	UStaticMeshComponent* MeshHull;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshCockpit;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshLeftWing;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshRightWing;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshLeftGun;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshRightGun;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UStaticMeshComponent* MeshEngine;
+
+private:
 
 
 };
