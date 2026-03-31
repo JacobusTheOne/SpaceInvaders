@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Ships/BossEnemy.h"
+#include "Components/BossSFXComponent.h"
 #include "Managers/WaveManager.h"
 #include "Components/Projectile.h"
 #include "Kismet/GameplayStatics.h"
@@ -11,6 +12,8 @@ ABossEnemy::ABossEnemy()
 	PrimaryActorTick.bCanEverTick = true;
 	SetHealth(3);
 	SetScoreValue(1000);
+
+	BossSFXComponent = CreateDefaultSubobject<UBossSFXComponent>(TEXT("BossSFXComponent"));
 }
 
 void ABossEnemy::BeginPlay()
@@ -85,6 +88,7 @@ float ABossEnemy::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent
 	if (Applied > 0.f && !IsActorBeingDestroyed())
 	{
 		OnHealthChanged.Broadcast(GetHealth(), MaxHealth);
+		BossSFXComponent->PlayHit();
 
 		if (GetHealth() <= 1 && CurrentPhase != EBossPhase::Enraged)
 		{
@@ -100,6 +104,7 @@ float ABossEnemy::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent
 void ABossEnemy::EnterPhase(EBossPhase NewPhase)
 {
 	CurrentPhase     = NewPhase;
+	BossSFXComponent->PlayPhaseChange();
 	AttackCycleIndex = 0;
 	GetWorldTimerManager().ClearTimer(AttackTimer);
 	ScheduleNextAttack();
@@ -154,6 +159,8 @@ void ABossEnemy::FireSpreadShot()
 			if (SpreadShotSpeed > 0.f) P->OverrideSpeed(SpreadShotSpeed);
 		}
 	}
+
+	BossSFXComponent->PlaySpreadShot();
 }
 
 void ABossEnemy::FireAimedShot()
@@ -168,6 +175,7 @@ void ABossEnemy::FireAimedShot()
 	if (AProjectile* P = CachedWaveManager->GetPooledProjectile(FTransform(Dir.Rotation(), Origin), Dir))
 	{
 		if (AimedShotSpeed > 0.f) P->OverrideSpeed(AimedShotSpeed);
+		BossSFXComponent->PlayAimedShot();
 	}
 }
 
@@ -180,12 +188,28 @@ void ABossEnemy::StartCharge()
 	ChargeElapsed    = 0.f;
 	ChargeOrigin     = GetActorLocation();
 	ChargeDirection  = (Player->GetActorLocation() - ChargeOrigin).GetSafeNormal();
+
+	BossSFXComponent->PlayChargeStart();
 }
 
 void ABossEnemy::EndCharge()
 {
 	bIsCharging = false;
 	SetActorLocation(ChargeOrigin); // snap back cleanly
+	BossSFXComponent->PlayChargeEnd();
+}
+
+// ── Static helpers ────────────────────────────────────────────────────────────
+
+FVector ABossEnemy::ClampToBounds(const FVector& DesiredLocation,
+                                   const FVector2D& BoundsOrigin,
+                                   const FVector2D& BoundsExtent)
+{
+	return FVector(
+		FMath::Clamp(DesiredLocation.X, BoundsOrigin.X - BoundsExtent.X, BoundsOrigin.X + BoundsExtent.X),
+		FMath::Clamp(DesiredLocation.Y, BoundsOrigin.Y - BoundsExtent.Y, BoundsOrigin.Y + BoundsExtent.Y),
+		DesiredLocation.Z
+	);
 }
 
 // ── Patrol helpers ────────────────────────────────────────────────────────────

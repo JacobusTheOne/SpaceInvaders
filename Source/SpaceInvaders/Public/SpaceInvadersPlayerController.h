@@ -4,10 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "InputActionValue.h"
 #include "SpaceInvadersPlayerController.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+
 /**
- * 
+ *
  */
 UCLASS()
 class SPACEINVADERS_API ASpaceInvadersPlayerController : public APlayerController
@@ -18,4 +22,14 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputMappingContext* EscapeMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* EscapeAction;
+
+private:
+	void OnEscapePressed();
 };

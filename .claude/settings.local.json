@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find d:GameIdeaSpaceInvaders/Content -type f \\\\\\(-name *sound* -o -name *audio* -o -name *Sound* -o -name *Audio* -o -name *.wav \\\\\\))",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

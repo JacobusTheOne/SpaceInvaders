@@ -92,6 +92,11 @@ private:
 	// HP override per row (0 = use the Blueprint class default)
 	TArray<int32> RowHealthOverrides;
 
+	// Single-slot special enemy override — null means none this wave
+	TSubclassOf<AEnemyBase> SpecialEnemyClass;
+	int32 SpecialEnemyRow = -1;
+	int32 SpecialEnemyCol = -1;
+
 	// Set via Configure — applied to each enemy on spawn
 	float SpawnShootIntervalMin = 1.f;
 	float SpawnShootIntervalMax = 4.f;

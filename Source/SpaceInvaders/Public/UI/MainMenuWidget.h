@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "MainMenuWidget.generated.h"
 
+class UVolumeSettingsWidget;
+
 UCLASS()
 class SPACEINVADERS_API UMainMenuWidget : public UUserWidget
 {
@@ -20,8 +22,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Main Menu")
 	void QuitGame();
 
+	// Bound to the Settings button OnClicked event in the WBP Blueprint
+	UFUNCTION(BlueprintCallable, Category = "Main Menu")
+	void OpenSettings();
+
 private:
-	// Package name of the gameplay level — must match the .umap asset name
 	UPROPERTY(EditDefaultsOnly, Category = "Main Menu")
 	FName GameLevelName = TEXT("Defaultmap");
+
+	UPROPERTY(EditDefaultsOnly, Category = "Main Menu")
+	TSubclassOf<UVolumeSettingsWidget> SettingsWidgetClass;
 };

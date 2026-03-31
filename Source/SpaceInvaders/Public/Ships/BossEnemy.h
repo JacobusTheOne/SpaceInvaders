@@ -7,6 +7,7 @@
 #include "BossEnemy.generated.h"
 
 class AWaveManager;
+class UBossSFXComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBossHealthChanged, int32, CurrentHealth, int32, MaxHealth);
 
@@ -37,6 +38,12 @@ public:
 	bool bInvincible = false;
 
 	virtual bool ShouldDieOnPlayerContact() const override { return false; }
+
+	// Returns DesiredLocation with its X and Y clamped inside the given patrol bounds,
+	// preserving Z. Use this before spawning to guarantee the boss starts within its area.
+	static FVector ClampToBounds(const FVector& DesiredLocation,
+	                              const FVector2D& BoundsOrigin,
+	                              const FVector2D& BoundsExtent);
 
 	// Set by WaveManager before BeginPlay — X/Y world-space centre of the patrol area.
 	UPROPERTY(BlueprintReadWrite, Category = "Boss|Movement")
@@ -129,4 +136,7 @@ private:
 	FTimerHandle AttackTimer;
 
 	TWeakObjectPtr<AWaveManager> CachedWaveManager;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UBossSFXComponent* BossSFXComponent;
 };

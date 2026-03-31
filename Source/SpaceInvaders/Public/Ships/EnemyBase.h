@@ -11,6 +11,8 @@ class USceneComponent;
 class UShootingComponent;
 class AProjectile;
 class AEnemyFormation;
+class UEnemySFXComponent;
+class UNiagaraSystem;
 
 UCLASS()
 class SPACEINVADERS_API AEnemyBase : public APawn
@@ -24,6 +26,12 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UEnemySFXComponent* SFXComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy|VFX")
+	UNiagaraSystem* ExplosionEffect;
 
 	// Random fire interval range (seconds)
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy|Shooting")

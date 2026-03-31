@@ -16,7 +16,8 @@ public class SpaceInvaders : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
-			"UMG"
+			"UMG",
+			"Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

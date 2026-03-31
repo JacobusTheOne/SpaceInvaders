@@ -23,6 +23,10 @@ void AEnemyFormation::Configure(const FWaveConfig& Config)
 	SpawnShootIntervalMin = Config.ShootIntervalMin;
 	SpawnShootIntervalMax = Config.ShootIntervalMax;
 
+	SpecialEnemyClass = Config.SpecialEnemyClass;
+	SpecialEnemyRow   = Config.SpecialEnemyRow;
+	SpecialEnemyCol   = Config.SpecialEnemyCol;
+
 	// If BeginPlay has already run (level-placed formation), spawn the grid now.
 	// For deferred-spawned formations Configure is called before BeginPlay,
 	// so BeginPlay handles the spawn instead.
@@ -146,7 +150,12 @@ void AEnemyFormation::SpawnGrid()
 			Params.Owner = this;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-			AEnemyBase* Enemy = World->SpawnActor<AEnemyBase>(ClassForRow, SpawnLocation, FRotator::ZeroRotator, Params);
+			// Use the special enemy class for the designated slot, if set
+			TSubclassOf<AEnemyBase> ActualClass = (SpecialEnemyClass && Row == SpecialEnemyRow && Col == SpecialEnemyCol)
+				? SpecialEnemyClass
+				: ClassForRow;
+
+			AEnemyBase* Enemy = World->SpawnActor<AEnemyBase>(ActualClass, SpawnLocation, FRotator::ZeroRotator, Params);
 
 			if (Enemy)
 			{

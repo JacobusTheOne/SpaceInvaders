@@ -1,4 +1,5 @@
 #include "Managers/WaveManager.h"
+#include "Managers/SoundManager.h"
 #include "Formation/EnemyFormation.h"
 #include "GameState/SpaceInvaderGameState.h"
 #include "UI/WaveClearedUI.h"
@@ -55,6 +56,8 @@ FWaveConfig AWaveManager::BuildWaveConfig(int32 WaveNumber) const
 {
 	FWaveConfig Config = BaseFormationConfig;
 
+	Config.StartingY = FMath::RandRange(SpawnYMin, SpawnYMax);
+
 	// Apply per-wave scaling on top of the designer's base values
 	const float SpeedScale    = FMath::Pow(SpeedWaveScale,   WaveNumber);
 	const float DescentScale  = FMath::Pow(DescentWaveScale, WaveNumber);
@@ -102,6 +105,17 @@ FWaveConfig AWaveManager::BuildWaveConfig(int32 WaveNumber) const
 
 		Config.RowClasses[Row]         = EnemyTiers[TierIndex].EnemyClass;
 		Config.RowHealthOverrides[Row] = EnemyTiers[TierIndex].HealthOverride;
+	}
+
+	// ── Special enemy injection ───────────────────────────────────────────────
+	++WavesSinceLastSpecial;
+	if (SpecialEnemyClass && WaveNumber > 0 && WavesSinceLastSpecial >= NextSpecialWaveInterval)
+	{
+		Config.SpecialEnemyClass = SpecialEnemyClass;
+		Config.SpecialEnemyRow   = FMath::RandRange(0, Config.EnemyRows - 1);
+		Config.SpecialEnemyCol   = FMath::RandRange(0, Config.EnemyCols - 1);
+		WavesSinceLastSpecial    = 0;
+		NextSpecialWaveInterval  = FMath::RandRange(2, 3);
 	}
 
 	//UE_LOG(LogTemp, Warning, TEXT("WaveManager: wave %d — DifficultyT=%.3f, SpeedMult=%.3f, DescentMult=%.3f, ShootInterval=[%.2f, %.2f]"),
@@ -200,6 +214,11 @@ void AWaveManager::OnCountdownFinished()
 	}
 }
 
+void AWaveManager::TriggerGameOver()
+{
+	OnGameOverTriggered();
+}
+
 void AWaveManager::OnGameOverTriggered()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("WaveManager: Game Over — enemy crossed X threshold %.1f"), GameOverXThreshold);
@@ -230,19 +249,25 @@ void AWaveManager::OnRestartGame()
 
 void AWaveManager::SpawnBoss()
 {
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FVector SpawnLoc = ABossEnemy::ClampToBounds(BossSpawnLocation, BossPatrolBoundsOrigin, BossPatrolBoundsExtent);
+	const FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLoc);
 
-	FVector SpawnLoc = BossSpawnLocation;
-	//SpawnLoc.Z = BaseFormationConfig.StartingZ;
-	ABossEnemy* Boss = GetWorld()->SpawnActor<ABossEnemy>(BossClass, SpawnLoc, FRotator::ZeroRotator, Params);
+	ABossEnemy* Boss = GetWorld()->SpawnActorDeferred<ABossEnemy>(
+		BossClass, SpawnTransform, this, nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (Boss)
 	{
-		Boss->bInvincible          = bDebugBossOnly;
-		Boss->PatrolBoundsOrigin   = BossPatrolBoundsOrigin;
-		Boss->PatrolBoundsExtent   = BossPatrolBoundsExtent;
+		// Set bounds BEFORE FinishSpawningActor so BeginPlay sees the correct values
+		Boss->bInvincible        = bDebugBossOnly;
+		Boss->PatrolBoundsOrigin = BossPatrolBoundsOrigin;
+		Boss->PatrolBoundsExtent = BossPatrolBoundsExtent;
+		UGameplayStatics::FinishSpawningActor(Boss, SpawnTransform);
 		Boss->OnDestroyed.AddDynamic(this, &AWaveManager::OnBossDestroyed);
+
+		if (ASoundManager* SM = ASoundManager::Get(GetWorld()))
+		{
+			SM->PlayBossMusic();
+		}
 		//UE_LOG(LogTemp, Log, TEXT("WaveManager: boss spawned at %s before wave %d (invincible=%s)"), *SpawnLoc.ToString(), PendingNextWave, bDebugBossOnly ? TEXT("true") : TEXT("false"));
 	}
 	else
@@ -257,6 +282,26 @@ void AWaveManager::SpawnBoss()
 void AWaveManager::OnBossDestroyed(AActor* DestroyedActor)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("WaveManager: boss destroyed — starting wave %d"), PendingNextWave);
+
+	if (ASoundManager* SM = ASoundManager::Get(GetWorld()))
+	{
+		SM->PlayGameplayMusic();
+	}
+
+	if (WaveClearedUIClass)
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		UWaveClearedUI* Widget = CreateWidget<UWaveClearedUI>(PC, WaveClearedUIClass);
+		if (Widget)
+		{
+			Widget->AddToViewport();
+			Widget->OnCountdownFinished.AddDynamic(this, &AWaveManager::OnCountdownFinished);
+			Widget->StartBossDestroyedSequence();
+			return;
+		}
+	}
+
+	// Fallback: no widget class set — start immediately
 	if (PendingNextWave >= 0)
 	{
 		StartWave(PendingNextWave);

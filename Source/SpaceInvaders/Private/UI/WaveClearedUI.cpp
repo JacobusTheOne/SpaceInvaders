@@ -19,6 +19,24 @@ void UWaveClearedUI::StartSequence()
 		CountdownTimer, this, &UWaveClearedUI::TickCountdown, 1.5f, false);
 }
 
+void UWaveClearedUI::StartBossDestroyedSequence()
+{
+	bIsBossDestroyed = true;
+	CountdownValue = 3;
+
+	if (HeaderText)
+	{
+		HeaderText->SetText(FText::FromString(TEXT("Boss Destroyed!")));
+	}
+	if (CountdownText)
+	{
+		CountdownText->SetText(FText::FromString(TEXT("Get Ready!")));
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(
+		CountdownTimer, this, &UWaveClearedUI::TickCountdown, 1.5f, false);
+}
+
 void UWaveClearedUI::StartGameOverSequence()
 {
 	bIsGameOver = true;
@@ -41,9 +59,13 @@ void UWaveClearedUI::TickCountdown()
 {
 	if (CountdownValue > 0)
 	{
-		const FString Label = bIsGameOver
-			? FString::Printf(TEXT("Restarting in %d"), CountdownValue)
-			: FString::FromInt(CountdownValue);
+		FString Label;
+		if (bIsGameOver)
+			Label = FString::Printf(TEXT("Restarting in %d"), CountdownValue);
+		else if (bIsBossDestroyed)
+			Label = FString::Printf(TEXT("Next Wave in %d"), CountdownValue);
+		else
+			Label = FString::FromInt(CountdownValue);
 
 		if (CountdownText)
 		{

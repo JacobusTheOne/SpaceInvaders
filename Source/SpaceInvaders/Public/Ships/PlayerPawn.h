@@ -12,6 +12,10 @@ class UStaticMeshComponent;
 class UBoxComponent;
 class UShootingComponent;
 class AProjectile;
+class UPlayerSFXComponent;
+class UNiagaraSystem;
+class UWidgetComponent;
+class UStrafeCooldownWidget;
 
 UCLASS()
 class SPACEINVADERS_API APlayerPawn : public APawn
@@ -20,6 +24,16 @@ class SPACEINVADERS_API APlayerPawn : public APawn
 
 public:
     APlayerPawn();
+
+    // Permanently increases fire rate by AdditionalRate (rounds/second)
+    void BoostFireRate(float AdditionalRate);
+
+    // Debug: toggle invincibility on/off
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void ToggleGodMode();
+
+    UFUNCTION(BlueprintPure, Category = "Debug")
+    bool IsGodModeActive() const { return bGodMode; }
 
 protected:
     virtual void BeginPlay() override;
@@ -48,6 +62,24 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     UInputAction* FireAction;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input|Debug")
+    UInputAction* KillWaveAction;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* StrafeAction;
+
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UPlayerSFXComponent* SFXComponent;
+
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UWidgetComponent* StrafeIndicatorComponent;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
+    TSubclassOf<UStrafeCooldownWidget> StrafeCooldownWidgetClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|VFX")
+    UNiagaraSystem* ExplosionEffect;
 
     // Shooting
     UPROPERTY(EditDefaultsOnly, Category = "Player|Shooting", meta = (ClampMin = "0.1"))
@@ -82,18 +114,39 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Movement")
     float BoundBottom = -400.f;
 
+    // Speed of the strafe burst (units/s)
+    UPROPERTY(EditDefaultsOnly, Category = "Movement|Strafe", meta = (ClampMin = "0.0"))
+    float StrafeBoostSpeed = 1400.f;
+
+    // How long the burst lasts (seconds)
+    UPROPERTY(EditDefaultsOnly, Category = "Movement|Strafe", meta = (ClampMin = "0.0"))
+    float StrafeBoostDuration = 0.15f;
+
+    // Time before strafe can be used again (seconds)
+    UPROPERTY(EditDefaultsOnly, Category = "Movement|Strafe", meta = (ClampMin = "0.0"))
+    float StrafeCooldown = 3.f;
+
     // Input callbacks
     void OnMove(const FInputActionValue& Value);
     void OnMoveStop();
     void OnFire();
     void OnFireStop();
+    void OnKillWave();
+    void OnStrafe(const FInputActionValue& Value);
+    void TryStrafe(float Direction);
 
     UFUNCTION()
     void OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
         bool bFromSweep, const FHitResult& SweepResult);
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (AllowPrivateAccess = "true"))
+    bool bGodMode = false;
 private:
     FVector2D CurrentMoveInput;
-    bool bIsDead = false;
+    bool  bIsDead               = false;
+    float StrafeCooldownRemaining = 0.f;
+    float StrafeBoostRemaining    = 0.f;
+    float StrafeBoostDir          = 0.f; // -1 left, +1 right
+
 };

@@ -17,6 +17,9 @@ public:
 	// Call this to begin the "Wave Cleared! → Get Ready → 3 → 2 → 1" sequence
 	void StartSequence();
 
+	// Call this to begin the "Boss Destroyed! → Get Ready → 3 → 2 → 1" sequence
+	void StartBossDestroyedSequence();
+
 	// Call this to begin the "Game Over! → Restarting in 3 → 2 → 1" sequence
 	void StartGameOverSequence();
 
@@ -38,4 +41,5 @@ private:
 	FTimerHandle CountdownTimer;
 	int32 CountdownValue = 3;
 	bool bIsGameOver = false;
+	bool bIsBossDestroyed = false;
 };

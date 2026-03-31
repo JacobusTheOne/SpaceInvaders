@@ -2,7 +2,9 @@
 
 
 #include "Ships/EnemyBase.h"
+#include "Components/EnemySFXComponent.h"
 #include "Components/BoxComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "GameState/SpaceInvaderGameState.h"
@@ -57,6 +59,8 @@ AEnemyBase::AEnemyBase()
 	ShootingComponent = CreateDefaultSubobject<UShootingComponent>(TEXT("ShootingComponent"));
 	ShootingComponent->SetupAttachment(RootComponent);
 	ShootingComponent->FireDirection = FVector(-1.f, 0.f, 0.f); // fire toward player (-X)
+
+	SFXComponent = CreateDefaultSubobject<UEnemySFXComponent>(TEXT("SFXComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -106,6 +110,8 @@ void AEnemyBase::FireAndReschedule()
 			Proj->Tags.Add(FName("EnemyProjectile"));
 			UGameplayStatics::FinishSpawningActor(Proj, SpawnTransform);
 		}
+
+		SFXComponent->PlayShoot();
 	}
 
 	ScheduleNextShot();
@@ -132,6 +138,13 @@ float AEnemyBase::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent
 		if (ASpaceInvaderGameState* GS = GetWorld()->GetGameState<ASpaceInvaderGameState>())
 		{
 			GS->AddScore(ScoreValue);
+		}
+
+		SFXComponent->PlayDeath();
+
+		if (ExplosionEffect)
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ExplosionEffect, GetActorLocation());
 		}
 
 		UE_LOG(LogTemp, Log, TEXT("EnemyBase: %s destroyed — awarded %d points"), *GetName(), ScoreValue);

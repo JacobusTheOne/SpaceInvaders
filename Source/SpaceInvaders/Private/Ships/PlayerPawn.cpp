@@ -1,4 +1,8 @@
 #include "Ships/PlayerPawn.h"
+#include "Components/WidgetComponent.h"
+#include "UI/StrafeCooldownWidget.h"
+#include "Components/PlayerSFXComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
@@ -9,6 +13,7 @@
 #include "Ships/EnemyBase.h"
 #include "GameState/SpaceInvaderGameState.h"
 #include "GameModes/SpaceInvaderGameModeBase.h"
+#include "Managers/WaveManager.h"
 #include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -28,6 +33,14 @@ APlayerPawn::APlayerPawn()
 
     ShootingComponent = CreateDefaultSubobject<UShootingComponent>(TEXT("ShootingComponent"));
     ShootingComponent->SetupAttachment(RootComponent);
+
+    SFXComponent = CreateDefaultSubobject<UPlayerSFXComponent>(TEXT("SFXComponent"));
+
+    StrafeIndicatorComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("StrafeIndicatorComponent"));
+    StrafeIndicatorComponent->SetupAttachment(RootComponent);
+    StrafeIndicatorComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    StrafeIndicatorComponent->SetRelativeLocation(FVector(0.f, 0.f, 80.f));
+    StrafeIndicatorComponent->SetDrawSize(FVector2D(100.f, 20.f));
 }
 
 void APlayerPawn::BeginPlay()
@@ -35,6 +48,11 @@ void APlayerPawn::BeginPlay()
     Super::BeginPlay();
 
     CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APlayerPawn::OnCollisionOverlap);
+
+    if (StrafeCooldownWidgetClass)
+    {
+        StrafeIndicatorComponent->SetWidgetClass(StrafeCooldownWidgetClass);
+    }
 
     ShootingComponent->FireRate = FireRate;
 
@@ -58,6 +76,14 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
         EIC->BindAction(MoveAction, ETriggerEvent::Completed, this, &APlayerPawn::OnMoveStop);
         EIC->BindAction(FireAction, ETriggerEvent::Triggered, this, &APlayerPawn::OnFire);
         EIC->BindAction(FireAction, ETriggerEvent::Completed, this, &APlayerPawn::OnFireStop);
+        if (KillWaveAction)
+        {
+            EIC->BindAction(KillWaveAction, ETriggerEvent::Started, this, &APlayerPawn::OnKillWave);
+        }
+        if (StrafeAction)
+        {
+            EIC->BindAction(StrafeAction, ETriggerEvent::Started, this, &APlayerPawn::OnStrafe);
+        }
     }
 }
 
@@ -65,13 +91,31 @@ void APlayerPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (!CurrentMoveInput.IsNearlyZero())
+    if (StrafeCooldownRemaining > 0.f)
     {
-        FVector MoveDir = FVector(CurrentMoveInput.Y, CurrentMoveInput.X, 0.f).GetSafeNormal();
-        FVector NewLocation = GetActorLocation() + MoveDir * MoveSpeed * DeltaTime;
-        NewLocation.X = FMath::Clamp(NewLocation.X, BoundBottom, BoundTop);
-        NewLocation.Y = FMath::Clamp(NewLocation.Y, BoundLeft, BoundRight);
-        SetActorLocation(NewLocation);
+        StrafeCooldownRemaining = FMath::Max(0.f, StrafeCooldownRemaining - DeltaTime);
+    }
+
+    FVector NewLocation = GetActorLocation();
+
+    if (StrafeBoostRemaining > 0.f)
+    {
+        StrafeBoostRemaining = FMath::Max(0.f, StrafeBoostRemaining - DeltaTime);
+        NewLocation.Y += StrafeBoostDir * StrafeBoostSpeed * DeltaTime;
+    }
+    else if (!CurrentMoveInput.IsNearlyZero())
+    {
+        const FVector MoveDir = FVector(CurrentMoveInput.Y, CurrentMoveInput.X, 0.f).GetSafeNormal();
+        NewLocation += MoveDir * MoveSpeed * DeltaTime;
+    }
+
+    NewLocation.X = FMath::Clamp(NewLocation.X, BoundBottom, BoundTop);
+    NewLocation.Y = FMath::Clamp(NewLocation.Y, BoundLeft, BoundRight);
+    SetActorLocation(NewLocation);
+
+    if (UStrafeCooldownWidget* W = Cast<UStrafeCooldownWidget>(StrafeIndicatorComponent->GetUserWidgetObject()))
+    {
+        W->UpdateCooldown(StrafeCooldownRemaining, StrafeCooldown);
     }
 }
 
@@ -106,12 +150,54 @@ void APlayerPawn::OnFire()
         UGameplayStatics::FinishSpawningActor(Proj, SpawnTransform);
     }
 
+    SFXComponent->PlayShoot();
     ShootingComponent->StartCooldown();
 }
 
 void APlayerPawn::OnFireStop()
 {
     //Might not be needed
+}
+
+void APlayerPawn::ToggleGodMode()
+{
+    bGodMode = !bGodMode;
+    UE_LOG(LogTemp, Warning, TEXT("PlayerPawn: God Mode %s"), bGodMode ? TEXT("ON") : TEXT("OFF"));
+}
+
+void APlayerPawn::OnStrafe(const FInputActionValue& Value)
+{
+    if (!FMath::IsNearlyZero(CurrentMoveInput.X))
+    {
+        TryStrafe(FMath::Sign(CurrentMoveInput.X));
+    }
+}
+
+void APlayerPawn::TryStrafe(float Direction)
+{
+    if (StrafeCooldownRemaining > 0.f) return;
+
+    StrafeBoostDir        = Direction;
+    StrafeBoostRemaining  = StrafeBoostDuration;
+    StrafeCooldownRemaining = StrafeCooldown;
+}
+
+void APlayerPawn::OnKillWave()
+{
+    TArray<AActor*> Enemies;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyBase::StaticClass(), Enemies);
+    UE_LOG(LogTemp, Warning, TEXT("Debug KillWave — destroying %d enemies"), Enemies.Num());
+    for (AActor* Enemy : Enemies)
+    {
+        if (IsValid(Enemy)) Enemy->Destroy();
+    }
+}
+
+void APlayerPawn::BoostFireRate(float AdditionalRate)
+{
+    FireRate += AdditionalRate;
+    ShootingComponent->FireRate = FireRate;
+    UE_LOG(LogTemp, Warning, TEXT("PowerUp collected — FireRate boosted by %.2f, new FireRate: %.2f"), AdditionalRate, FireRate);
 }
 
 void APlayerPawn::OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -131,8 +217,15 @@ void APlayerPawn::OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, A
 float APlayerPawn::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent,
     AController* EventInstigator, AActor* DamageCauser)
 {
-    if (bIsDead) return 0.f;
+    if (bIsDead || bGodMode) return 0.f;
     bIsDead = true;
+
+    SFXComponent->PlayDeath();
+
+    if (ExplosionEffect)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ExplosionEffect, GetActorLocation());
+    }
 
     ASpaceInvaderGameState* GS = GetWorld()->GetGameState<ASpaceInvaderGameState>();
     ASpaceInvaderGameModeBase* GM = GetWorld()->GetAuthGameMode<ASpaceInvaderGameModeBase>();
@@ -151,8 +244,12 @@ float APlayerPawn::TakeDamage(float DamageAmount, const FDamageEvent& DamageEven
         }
         else
         {
-            UE_LOG(LogTemp, Log, TEXT("PlayerPawn: no lives remaining — restarting level"));
-            UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetMapName()));
+            UE_LOG(LogTemp, Log, TEXT("PlayerPawn: no lives remaining — triggering Game Over UI"));
+            if (AWaveManager* WM = Cast<AWaveManager>(
+                UGameplayStatics::GetActorOfClass(GetWorld(), AWaveManager::StaticClass())))
+            {
+                WM->TriggerGameOver();
+            }
         }
     }
 

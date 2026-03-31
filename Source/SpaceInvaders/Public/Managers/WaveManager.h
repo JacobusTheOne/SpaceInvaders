@@ -101,6 +101,12 @@ struct FWaveConfig
 	// One entry per row; filled before passing to EnemyFormation::Configure.
 	TArray<TSubclassOf<AEnemyBase>> RowClasses;
 	TArray<int32>                   RowHealthOverrides;
+
+	// Special enemy override — a single grid slot uses this class instead of its row class.
+	// Null means no special enemy this wave.
+	TSubclassOf<AEnemyBase> SpecialEnemyClass;
+	int32 SpecialEnemyRow = -1;
+	int32 SpecialEnemyCol = -1;
 };
 
 UCLASS()
@@ -120,6 +126,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Wave")
 	int32 GetWaveIndex() const { return WaveIndex; }
+
+	// Called when the player loses all lives — shows "Game Over" UI and restarts
+	UFUNCTION(BlueprintCallable, Category = "Wave")
+	void TriggerGameOver();
 
 	// Returns an inactive pooled projectile, fires it at Direction from T.
 	AProjectile* GetPooledProjectile(const FTransform& T, const FVector& Direction);
@@ -189,6 +199,13 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Wave|Layout", meta = (AllowPrivateAccess = "true"))
 	FWaveConfig BaseFormationConfig;
 
+	// Random Y spawn range — each wave picks a value in [SpawnYMin, SpawnYMax]
+	UPROPERTY(EditAnywhere, Category = "Wave|Layout", meta = (AllowPrivateAccess = "true"))
+	float SpawnYMin = -560.f;
+
+	UPROPERTY(EditAnywhere, Category = "Wave|Layout", meta = (AllowPrivateAccess = "true"))
+	float SpawnYMax = 560.f;
+
 	// Formation Blueprint subclass to spawn each wave
 	UPROPERTY(EditAnywhere, Category = "Wave", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<AEnemyFormation> FormationClass;
@@ -219,6 +236,13 @@ private:
 	// Boss spawns every 3rd cleared wave (after waves 3, 6, 9 …)
 	UPROPERTY(EditAnywhere, Category = "Wave|Boss", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ABossEnemy> BossClass;
+
+	// Special enemy mixed into the formation every 2nd or 3rd wave (one per wave)
+	UPROPERTY(EditAnywhere, Category = "Wave|SpecialEnemy", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AEnemyBase> SpecialEnemyClass;
+
+	mutable int32 WavesSinceLastSpecial   = 0;
+	mutable int32 NextSpecialWaveInterval = 2; // randomised to 2 or 3 after each spawn
 
 	// World-space location where the boss actor is spawned
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave|Boss", meta = (AllowPrivateAccess = "true"))
