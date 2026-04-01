@@ -8,6 +8,7 @@
 #include "SpaceInvaderGameModeBase.generated.h"
 
 class UPauseMenuWidget;
+class ASoundManager;
 
 UCLASS()
 class SPACEINVADERS_API ASpaceInvaderGameModeBase : public AGameModeBase
@@ -30,6 +31,11 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pause")
 	TSubclassOf<UPauseMenuWidget> PauseMenuWidgetClass;
+
+	// Spawned automatically if no SoundManager is found in the level.
+	// Assign BP_SoundManager here so the gameplay level never needs one placed manually.
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	TSubclassOf<ASoundManager> SoundManagerClass;
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Mode")

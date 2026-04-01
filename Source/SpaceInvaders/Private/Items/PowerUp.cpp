@@ -1,5 +1,6 @@
 #include "Items/PowerUp.h"
 #include "Ships/PlayerPawn.h"
+#include "GameState/SpaceInvaderGameState.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -44,6 +45,11 @@ void APowerUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* 
 	if (!Player) return;
 
 	Player->BoostFireRate(FireRateBoost);
+
+	if (ASpaceInvaderGameState* GS = GetWorld()->GetGameState<ASpaceInvaderGameState>())
+	{
+		GS->AddFireRateBoost(FireRateBoost);
+	}
 
 	if (PickupEffect)
 	{

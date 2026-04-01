@@ -51,6 +51,10 @@ public:
     void Activate(const FTransform& SpawnTransform, const FVector& FireDirection);
     void ReturnToPool();
 
+    // Reverses this projectile toward enemies and re-tags it as a player projectile
+    UFUNCTION(BlueprintCallable, Category = "Projectile")
+    void PlayerDeflect(AActor* NewInstigator);
+
     // Set to true on pool-owned instances before FinishSpawningActor
     UPROPERTY(BlueprintReadWrite, Category = "Projectile")
     bool bIsPooled = false;
@@ -91,4 +95,10 @@ private:
     FName CollisionProfileName = FName("Projectile");
 
     FTimerHandle PoolLifeSpanTimer;
+    FTimerHandle DeflectKickTimerHandle;
+
+    bool    bDeflected            = false;
+    FVector PendingDeflectVelocity = FVector::ZeroVector;
+
+    void ApplyDeflectVelocity();
 };

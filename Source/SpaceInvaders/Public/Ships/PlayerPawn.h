@@ -16,6 +16,7 @@ class UPlayerSFXComponent;
 class UNiagaraSystem;
 class UWidgetComponent;
 class UStrafeCooldownWidget;
+class UDeflectCooldownWidget;
 
 UCLASS()
 class SPACEINVADERS_API APlayerPawn : public APawn
@@ -69,6 +70,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     UInputAction* StrafeAction;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* DeflectAction;
+
     UPROPERTY(VisibleAnywhere, Category = "Components")
     UPlayerSFXComponent* SFXComponent;
 
@@ -77,6 +81,12 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
     TSubclassOf<UStrafeCooldownWidget> StrafeCooldownWidgetClass;
+
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UWidgetComponent* DeflectIndicatorComponent;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
+    TSubclassOf<UDeflectCooldownWidget> DeflectCooldownWidgetClass;
 
     UPROPERTY(EditDefaultsOnly, Category = "Player|VFX")
     UNiagaraSystem* ExplosionEffect;
@@ -114,6 +124,21 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Movement")
     float BoundBottom = -400.f;
 
+    // How long the deflect shield stays active (seconds) — set in Blueprint
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Deflect", meta = (ClampMin = "0.0"))
+    float DeflectDuration = 1.f;
+
+    // Time before deflect can be used again (seconds) — set in Blueprint
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Deflect", meta = (ClampMin = "0.0"))
+    float DeflectCooldown = 5.f;
+
+    // Sphere shown during the deflect window — mesh and material set in Blueprint
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UStaticMeshComponent* DeflectSphere;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player|Deflect")
+    FVector DeflectSphereScale = FVector(3.f, 3.f, 3.f);
+
     // Speed of the strafe burst (units/s)
     UPROPERTY(EditDefaultsOnly, Category = "Movement|Strafe", meta = (ClampMin = "0.0"))
     float StrafeBoostSpeed = 1400.f;
@@ -134,6 +159,13 @@ private:
     void OnKillWave();
     void OnStrafe(const FInputActionValue& Value);
     void TryStrafe(float Direction);
+    void OnDeflect();
+
+    UFUNCTION(BlueprintCallable, Category = "Player|Deflect")
+    void TryDeflect();
+
+    UFUNCTION(BlueprintCallable, Category = "Player|Deflect")
+    void EndDeflect();
 
     UFUNCTION()
     void OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -148,5 +180,9 @@ private:
     float StrafeCooldownRemaining = 0.f;
     float StrafeBoostRemaining    = 0.f;
     float StrafeBoostDir          = 0.f; // -1 left, +1 right
+
+    bool  bDeflecting              = false;
+    float DeflectCooldownRemaining = 0.f;
+    FTimerHandle DeflectTimerHandle;
 
 };

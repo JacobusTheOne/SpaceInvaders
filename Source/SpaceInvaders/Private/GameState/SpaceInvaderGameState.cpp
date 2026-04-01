@@ -38,3 +38,8 @@ void ASpaceInvaderGameState::AdvanceWave()
 {
 	WaveNumber++;
 }
+
+void ASpaceInvaderGameState::AddFireRateBoost(float Amount)
+{
+	AccumulatedFireRateBoost += Amount;
+}

@@ -8,10 +8,16 @@ class USlider;
 class UButton;
 class ASoundManager;
 
+DECLARE_MULTICAST_DELEGATE(FOnSettingsClosed);
+
 UCLASS()
 class SPACEINVADERS_API UVolumeSettingsWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
+public:
+	/** Broadcast when the close button is clicked, before collapsing self. */
+	FOnSettingsClosed OnClosed;
 
 protected:
 	virtual void NativeConstruct() override;

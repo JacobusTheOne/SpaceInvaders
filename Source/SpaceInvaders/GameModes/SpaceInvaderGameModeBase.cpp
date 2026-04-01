@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameModes/SpaceInvaderGameModeBase.h"
+#include "Managers/SoundManager.h"
 #include "UI/PauseMenuWidget.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -17,6 +18,12 @@ void ASpaceInvaderGameModeBase::BeginPlay()
 	if (HUDWidget)
 	{
 		HUDWidget->AddToViewport();
+	}
+
+	// Spawn a SoundManager if the level doesn't already have one (e.g. it was only placed in MainMenu)
+	if (SoundManagerClass && !ASoundManager::Get(GetWorld()))
+	{
+		GetWorld()->SpawnActor<ASoundManager>(SoundManagerClass);
 	}
 }
 

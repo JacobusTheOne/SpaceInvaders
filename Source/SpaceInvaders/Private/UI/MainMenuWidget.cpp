@@ -5,6 +5,16 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+void UMainMenuWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (VolumeSettingsPanel)
+	{
+		VolumeSettingsPanel->OnClosed.AddUObject(this, &UMainMenuWidget::OnSettingsClosed);
+	}
+}
+
 void UMainMenuWidget::PlayGame()
 {
 	UGameplayStatics::OpenLevel(this, GameLevelName);
@@ -17,6 +27,21 @@ void UMainMenuWidget::QuitGame()
 
 void UMainMenuWidget::OpenSettings()
 {
-	if (!SettingsWidgetClass) return;
-	CreateWidget<UVolumeSettingsWidget>(GetOwningPlayer(), SettingsWidgetClass)->AddToViewport();
+	if (MainMenuOverlay)
+	{
+		MainMenuOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (VolumeSettingsPanel)
+	{
+		VolumeSettingsPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+}
+
+void UMainMenuWidget::OnSettingsClosed()
+{
+	if (MainMenuOverlay)
+	{
+		MainMenuOverlay->SetVisibility(ESlateVisibility::Visible);
+	}
 }

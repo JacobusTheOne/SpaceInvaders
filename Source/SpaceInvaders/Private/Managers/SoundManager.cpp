@@ -1,4 +1,5 @@
 #include "Managers/SoundManager.h"
+#include "SpaceInvadersGameInstance.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -26,6 +27,13 @@ void ASoundManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Restore volume settings saved by the previous level (e.g. MainMenu)
+	if (USpaceInvadersGameInstance* GI = GetGameInstance<USpaceInvadersGameInstance>())
+	{
+		SFXVolume   = GI->SFXVolume;
+		MusicVolume = GI->MusicVolume;
+	}
+
 	if (Music.Gameplay)
 	{
 		GameplayMusicComponent->SetSound(Music.Gameplay);
@@ -35,12 +43,20 @@ void ASoundManager::BeginPlay()
 		BossMusicComponent->SetSound(Music.Boss);
 	}
 
+	GameplayMusicComponent->SetVolumeMultiplier(MusicVolume);
+	BossMusicComponent->SetVolumeMultiplier(MusicVolume);
+
 	PlayGameplayMusic();
 }
 
 void ASoundManager::SetSFXVolume(float NewVolume)
 {
 	SFXVolume = FMath::Clamp(NewVolume, 0.f, 1.f);
+
+	if (USpaceInvadersGameInstance* GI = GetGameInstance<USpaceInvadersGameInstance>())
+	{
+		GI->SFXVolume = SFXVolume;
+	}
 }
 
 void ASoundManager::SetMusicVolume(float NewVolume)
@@ -48,6 +64,11 @@ void ASoundManager::SetMusicVolume(float NewVolume)
 	MusicVolume = FMath::Clamp(NewVolume, 0.f, 1.f);
 	GameplayMusicComponent->SetVolumeMultiplier(MusicVolume);
 	BossMusicComponent->SetVolumeMultiplier(MusicVolume);
+
+	if (USpaceInvadersGameInstance* GI = GetGameInstance<USpaceInvadersGameInstance>())
+	{
+		GI->MusicVolume = MusicVolume;
+	}
 }
 
 void ASoundManager::PlayGameplayMusic()

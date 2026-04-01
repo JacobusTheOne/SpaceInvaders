@@ -33,7 +33,8 @@ void UVolumeSettingsWidget::NativeConstruct()
 
 void UVolumeSettingsWidget::OnCloseClicked()
 {
-	RemoveFromParent();
+	OnClosed.Broadcast();
+	SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UVolumeSettingsWidget::OnSFXSliderChanged(float Value)

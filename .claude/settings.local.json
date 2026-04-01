@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(find d:GameIdeaSpaceInvaders/Content -type f \\\\\\(-name *sound* -o -name *audio* -o -name *Sound* -o -name *Audio* -o -name *.wav \\\\\\))",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(find /d/GameIdea/SpaceInvaders/Content -type f \\\\\\(-name *IA_* -o -name *IMC_* \\\\\\))",
+      "Bash(grep -r \"OnComponentBeginOverlap\\\\|OnComponentHit\\\\|SetCollisionProfileName\" /d/GameIdea/SpaceInvaders/Source --include=*.h --include=*.cpp)",
+      "Bash(grep -A 30 [/Script/Engine.CollisionProfile] /d/GameIdea/SpaceInvaders/Config/DefaultEngine.ini)"
     ]
   }
 }

@@ -261,5 +261,7 @@ private:
 	TSubclassOf<AProjectile> PooledProjectileClass;
 
 	static constexpr int32 ProjectilePoolSize = 60;
+
+	UPROPERTY()
 	TArray<TObjectPtr<AProjectile>> ProjectilePool;
 };

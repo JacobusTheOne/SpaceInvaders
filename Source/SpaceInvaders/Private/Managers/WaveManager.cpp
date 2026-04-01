@@ -94,13 +94,17 @@ FWaveConfig AWaveManager::BuildWaveConfig(int32 WaveNumber) const
 	const int32 NumRows  = Config.EnemyRows;
 	const float CenterTier = DifficultyT * static_cast<float>(NumTiers - 1);
 
+	// Scale spread by DifficultyT so mixing only opens up as the curve climbs.
+	// At DifficultyT=0 every row is Tier 1; at DifficultyT=1 the full TierSpread applies.
+	const float EffectiveSpread = TierSpread * DifficultyT;
+
 	Config.RowClasses.SetNum(NumRows);
 	Config.RowHealthOverrides.SetNum(NumRows);
 
 	for (int32 Row = 0; Row < NumRows; ++Row)
 	{
 		const float NormalizedRow = (NumRows > 1) ? static_cast<float>(Row) / static_cast<float>(NumRows - 1) : 0.5f;
-		const float TierFloat     = CenterTier + (NormalizedRow - 0.5f) * TierSpread;
+		const float TierFloat     = CenterTier + (NormalizedRow - 0.5f) * EffectiveSpread;
 		const int32 TierIndex     = FMath::Clamp(FMath::RoundToInt(TierFloat), 0, NumTiers - 1);
 
 		Config.RowClasses[Row]         = EnemyTiers[TierIndex].EnemyClass;

@@ -1,6 +1,7 @@
 #include "Ships/PlayerPawn.h"
 #include "Components/WidgetComponent.h"
 #include "UI/StrafeCooldownWidget.h"
+#include "UI/DeflectCooldownWidget.h"
 #include "Components/PlayerSFXComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "EnhancedInputComponent.h"
@@ -41,6 +42,18 @@ APlayerPawn::APlayerPawn()
     StrafeIndicatorComponent->SetWidgetSpace(EWidgetSpace::Screen);
     StrafeIndicatorComponent->SetRelativeLocation(FVector(0.f, 0.f, 80.f));
     StrafeIndicatorComponent->SetDrawSize(FVector2D(100.f, 20.f));
+
+    DeflectIndicatorComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("DeflectIndicatorComponent"));
+    DeflectIndicatorComponent->SetupAttachment(RootComponent);
+    DeflectIndicatorComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    DeflectIndicatorComponent->SetRelativeLocation(FVector(0.f, 0.f, 60.f));
+    DeflectIndicatorComponent->SetDrawSize(FVector2D(100.f, 20.f));
+
+    DeflectSphere = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DeflectSphere"));
+    DeflectSphere->SetupAttachment(RootComponent);
+    DeflectSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    DeflectSphere->SetRelativeScale3D(DeflectSphereScale);
+    DeflectSphere->SetHiddenInGame(true);
 }
 
 void APlayerPawn::BeginPlay()
@@ -54,6 +67,15 @@ void APlayerPawn::BeginPlay()
         StrafeIndicatorComponent->SetWidgetClass(StrafeCooldownWidgetClass);
     }
 
+    if (DeflectCooldownWidgetClass)
+    {
+        DeflectIndicatorComponent->SetWidgetClass(DeflectCooldownWidgetClass);
+    }
+
+    if (ASpaceInvaderGameState* GS = GetWorld()->GetGameState<ASpaceInvaderGameState>())
+    {
+        FireRate += GS->GetFireRateBoost();
+    }
     ShootingComponent->FireRate = FireRate;
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -84,6 +106,10 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
         {
             EIC->BindAction(StrafeAction, ETriggerEvent::Started, this, &APlayerPawn::OnStrafe);
         }
+        if (DeflectAction)
+        {
+            EIC->BindAction(DeflectAction, ETriggerEvent::Started, this, &APlayerPawn::OnDeflect);
+        }
     }
 }
 
@@ -94,6 +120,11 @@ void APlayerPawn::Tick(float DeltaTime)
     if (StrafeCooldownRemaining > 0.f)
     {
         StrafeCooldownRemaining = FMath::Max(0.f, StrafeCooldownRemaining - DeltaTime);
+    }
+
+    if (DeflectCooldownRemaining > 0.f)
+    {
+        DeflectCooldownRemaining = FMath::Max(0.f, DeflectCooldownRemaining - DeltaTime);
     }
 
     FVector NewLocation = GetActorLocation();
@@ -116,6 +147,11 @@ void APlayerPawn::Tick(float DeltaTime)
     if (UStrafeCooldownWidget* W = Cast<UStrafeCooldownWidget>(StrafeIndicatorComponent->GetUserWidgetObject()))
     {
         W->UpdateCooldown(StrafeCooldownRemaining, StrafeCooldown);
+    }
+
+    if (UDeflectCooldownWidget* W = Cast<UDeflectCooldownWidget>(DeflectIndicatorComponent->GetUserWidgetObject()))
+    {
+        W->UpdateCooldown(DeflectCooldownRemaining, DeflectCooldown);
     }
 }
 
@@ -200,6 +236,40 @@ void APlayerPawn::BoostFireRate(float AdditionalRate)
     UE_LOG(LogTemp, Warning, TEXT("PowerUp collected — FireRate boosted by %.2f, new FireRate: %.2f"), AdditionalRate, FireRate);
 }
 
+void APlayerPawn::OnDeflect()
+{
+    TryDeflect();
+}
+
+void APlayerPawn::TryDeflect()
+{
+    UE_LOG(LogTemp, Warning, TEXT("[Deflect] TryDeflect called — bDeflecting=%d, Cooldown=%.2f"),
+        bDeflecting, DeflectCooldownRemaining);
+
+    if (bDeflecting || DeflectCooldownRemaining > 0.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Deflect] TryDeflect BLOCKED (already active or on cooldown)"));
+        return;
+    }
+
+    bDeflecting = true;
+    UE_LOG(LogTemp, Warning, TEXT("[Deflect] ACTIVATED for %.2f seconds"), DeflectDuration);
+
+    DeflectSphere->SetHiddenInGame(false);
+
+    GetWorldTimerManager().SetTimer(
+        DeflectTimerHandle, this, &APlayerPawn::EndDeflect, DeflectDuration, false);
+}
+
+void APlayerPawn::EndDeflect()
+{
+    bDeflecting = false;
+    UE_LOG(LogTemp, Warning, TEXT("[Deflect] Shield expired — cooldown started (%.2f s)"), DeflectCooldown);
+
+    DeflectSphere->SetHiddenInGame(true);
+    DeflectCooldownRemaining = DeflectCooldown;
+}
+
 void APlayerPawn::OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
@@ -217,7 +287,32 @@ void APlayerPawn::OnCollisionOverlap(UPrimitiveComponent* OverlappedComponent, A
 float APlayerPawn::TakeDamage(float DamageAmount, const FDamageEvent& DamageEvent,
     AController* EventInstigator, AActor* DamageCauser)
 {
+    UE_LOG(LogTemp, Warning, TEXT("[Deflect] TakeDamage — bIsDead=%d bGodMode=%d bDeflecting=%d DamageCauser=%s"),
+        bIsDead, bGodMode, bDeflecting,
+        DamageCauser ? *DamageCauser->GetName() : TEXT("null"));
+
     if (bIsDead || bGodMode) return 0.f;
+
+    if (bDeflecting)
+    {
+        AProjectile* Proj = Cast<AProjectile>(DamageCauser);
+        UE_LOG(LogTemp, Warning, TEXT("[Deflect] bDeflecting=true — Cast to AProjectile: %s"),
+            Proj ? TEXT("SUCCESS") : TEXT("FAILED (not a projectile actor)"));
+
+        if (Proj)
+        {
+            const bool bHasTag = Proj->ActorHasTag(FName("EnemyProjectile"));
+            UE_LOG(LogTemp, Warning, TEXT("[Deflect] Projectile has 'EnemyProjectile' tag: %d"), bHasTag);
+
+            if (bHasTag)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[Deflect] Calling PlayerDeflect on %s"), *Proj->GetName());
+                Proj->PlayerDeflect(this);  // pass PlayerPawn as new instigator
+                return 0.f;
+            }
+        }
+    }
+
     bIsDead = true;
 
     SFXComponent->PlayDeath();

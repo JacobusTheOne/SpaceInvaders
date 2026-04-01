@@ -36,6 +36,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game State")
 	void TriggerGameOver();
 
+	// Power-ups — accumulated across respawns, reset automatically on level reload
+	UFUNCTION(BlueprintPure, Category = "Game State")
+	float GetFireRateBoost() const { return AccumulatedFireRateBoost; }
+
+	UFUNCTION(BlueprintCallable, Category = "Game State")
+	void AddFireRateBoost(float Amount);
+
 	// Wave
 	UFUNCTION(BlueprintPure, Category = "Game State")
 	int32 GetWaveNumber() const { return WaveNumber; }
@@ -55,4 +62,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Game State")
 	int32 WaveNumber = 1;
+
+	UPROPERTY(VisibleAnywhere, Category = "Game State")
+	float AccumulatedFireRateBoost = 0.f;
 };

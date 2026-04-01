@@ -7,6 +7,7 @@
 #include "MainMenuWidget.generated.h"
 
 class UVolumeSettingsWidget;
+class UWidget;
 
 UCLASS()
 class SPACEINVADERS_API UMainMenuWidget : public UUserWidget
@@ -26,10 +27,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Main Menu")
 	void OpenSettings();
 
+protected:
+	virtual void NativeConstruct() override;
+
 private:
+	void OnSettingsClosed();
+
 	UPROPERTY(EditDefaultsOnly, Category = "Main Menu")
 	FName GameLevelName = TEXT("Defaultmap");
 
-	UPROPERTY(EditDefaultsOnly, Category = "Main Menu")
-	TSubclassOf<UVolumeSettingsWidget> SettingsWidgetClass;
+	// Overlay containing the main menu buttons — name it MainMenuOverlay in WBP
+	UPROPERTY(meta = (BindWidgetOptional))
+	UWidget* MainMenuOverlay;
+
+	// Embed WBP_VolumeSettings inside WBP_MainMenu in UMG and name it VolumeSettingsPanel
+	UPROPERTY(meta = (BindWidgetOptional))
+	UVolumeSettingsWidget* VolumeSettingsPanel;
 };
